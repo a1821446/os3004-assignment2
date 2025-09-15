@@ -76,10 +76,11 @@ class RandMMU(MMU):
             f = self.page_table[page_number]
             self.frame_table[f]['dirty'] = True
             self.db_message(f"Page hit.\n\tPage: {page_number}\n\tFrame: {f}\n\tOperation: WRITE\n\tDirty: {self.frame_table[f]['dirty']}")
+            return
         
         # MISS
         self.page_faults += 1
-        self.db_message(f"Page miss.\n\tPage: {page_number}\n\tOperation: READ")
+        self.db_message(f"Page miss.\n\tPage: {page_number}\n\tOperation: WRITE")
         if len(self.free_list) > 0:
             f = self.free_list.pop()
             self.used_frames.append(f)
