@@ -5,6 +5,7 @@ from randmmu import RandMMU
 import sys
 
 
+
 def main():
     PAGE_OFFSET = 12  # page is 2^12 = 4KB
 

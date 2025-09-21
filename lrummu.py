@@ -3,12 +3,12 @@ from mmu import MMU
 class LruMMU(MMU):
     def __init__(self, frames):
         # TODO: Constructor logic for LruMMU
-        self.frames = frames
-        self.frame_table = [{'page': None, 'dirty': False, 'last_used': -1} for _ in range(frames)]
-        self.page_table = {}
-        self.free_list = list(range(frames))
-        self.used_frames = []
-        self.time = 0
+        self.frames = frames # number of physical frames available
+        self.frame_table = [{'page': None, 'dirty': False, 'last_used': -1} for _ in range(frames)] # per frame metadata
+        self.page_table = {} # quick lookup: page -> frame index
+        self.free_list = list(range(frames)) # stack/queue of free frame indices
+        self.used_frames = [] # indices currently holding valid pages
+        self.time = 0 # global metadata to track LRU
         self.disk_reads = 0
         self.disk_writes = 0
         self.page_faults = 0
@@ -16,10 +16,12 @@ class LruMMU(MMU):
 
     def set_debug(self):
         # TODO: Implement the method to set debug mode
+        # turn on debug printing
         self.debug = True
 
     def reset_debug(self):
         # TODO: Implement the method to reset debug mode
+        # turn off debug printing
         self.debug = False
 
     def db_message(self, msg):
@@ -27,6 +29,7 @@ class LruMMU(MMU):
             print(msg)
 
     def move_into_frame(self, f, page_number, is_write):
+        # load a page into a target frame; write back victim if needed
         self.frame_table[f] = {'page': page_number, 'dirty': is_write}
         self.page_table[page_number] = f
         self.disk_reads += 1
@@ -36,6 +39,7 @@ class LruMMU(MMU):
         self.db_message(f"Loaded page [{page_number}] into frame [{f}]")
 
     def evict_lru_page(self):
+        # choose the least-recently-used frame as victim depending on last_used metadata
         f = min(self.used_frames, key=lambda fi: self.frame_table[fi]['last_used'])
         victim = self.frame_table[f]
         if victim['dirty']:
@@ -52,6 +56,7 @@ class LruMMU(MMU):
 
     def read_memory(self, page_number):
         # TODO: Implement the method to read memory
+        # access a page for reading (no dirty bit)
         if page_number in self.page_table:
             # HIT
             f = self.page_table[page_number]
@@ -74,6 +79,7 @@ class LruMMU(MMU):
 
     def write_memory(self, page_number):
         # TODO: Implement the method to write memory
+        # access a page for writing (set dirty)
         if page_number in self.page_table:
             # HIT
             f = self.page_table[page_number]

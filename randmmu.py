@@ -4,23 +4,25 @@ import random
 class RandMMU(MMU):
     def __init__(self, frames):
         # TODO: Constructor logic for RandMMU
-        self.frames = frames
-        self.frame_table = [{'page': None, 'dirty': False} for _ in range(frames)]
-        self.page_table = {}
-        self.free_list = list(range(frames))
-        self.used_frames = []
+        self.frames = frames # number of frames available
+        self.frame_table = [{'page': None, 'dirty': False} for _ in range(frames)] # frame metadata
+        self.page_table = {} # page lookup table for frame index
+        self.free_list = list(range(frames)) #list of free frame indices
+        self.used_frames = [] # frames currently holding valid pages
         self.disk_reads = 0
         self.disk_writes = 0
         self.page_faults = 0
         self.debug = False
 
     def move_into_frame(self, f, page_number, is_write):
+        # load a page into a target frame; write back victim if needed
         self.frame_table[f] = {'page': page_number, 'dirty': is_write}
         self.page_table[page_number] = f
         self.disk_reads += 1
         self.db_message(f"Loaded page [{page_number}] into frame [{f}]")
 
     def evict_random_page(self):
+        # choose a victim frame at random
         victim_pos = random.randrange(len(self.used_frames))
         f = self.used_frames[victim_pos]
         victim = self.frame_table[f]
@@ -38,10 +40,12 @@ class RandMMU(MMU):
 
     def set_debug(self):
         # TODO: Implement the method to set debug mode
+        # turn on debug mode
         self.debug = True
 
     def reset_debug(self):
         # TODO: Implement the method to reset debug mode
+        #turn off debug mode
         self.debug = False
 
     def db_message(self, msg):
@@ -50,6 +54,7 @@ class RandMMU(MMU):
 
     def read_memory(self, page_number):
         # TODO: Implement the method to read memory
+        # access a page for reading (no dirty bit)
         if page_number in self.page_table:
             # HIT
             f = self.page_table[page_number]
@@ -71,6 +76,7 @@ class RandMMU(MMU):
 
     def write_memory(self, page_number):
         # TODO: Implement the method to write memory
+        # access a page for writing (set dirty)
         if page_number in self.page_table:
             # HIT
             f = self.page_table[page_number]
