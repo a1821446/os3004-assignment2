@@ -47,7 +47,6 @@ class ClockMMU(MMU):
         if old_page is not None:
             #chuck out old page
             if fr['dirty']:
-                self.disk_writes += 1
                 self.db(f"-- EVICT page {old_page} from frame {idx} (DIRTY)")
             else:
                 self.db(f"-- EVICT page {old_page} from frame {idx} (CLEAN)")
@@ -66,26 +65,32 @@ class ClockMMU(MMU):
         self._advance_hand()  #move hand on after placing
 
     def _evict_victim(self):
-        # clock algorithm - give second chances to pages with ref=1 (setting ref back to 0)
-        #evict a clean page with ref=0 on the first pass
-        #if none clean, evict dirty one with ref=0 on the second pass
-
+    # Clock algorithm: two passes
         for pass_no in (1, 2):
             scanned = 0
             while scanned < self.frames:
                 idx = self.hand
                 fr = self.frame_table[idx]
                 if fr['ref'] == 1:
-                    #page recently used, so clear ref and skip this time
+                # recently used, clear ref bit
                     fr['ref'] = 0
                     self.db(f"-- SCAN frame {idx}: ref=1 → clear to 0")
                 else:
-                    #ref=0, so it is a candidate
-                    if pass_no == 1 and not fr['dirty']:
-                        self.db(f"-- VICTIM frame {idx} page {fr['page']} (clean, pass1)")
+                # candidate victim
+                    if pass_no == 1:
+                        if not fr['dirty']:
+                            self.db(f"-- VICTIM frame {idx} page {fr['page']} (clean, pass1)")
+                        else:
+                            self.disk_writes +=1
+                            self.db(f"-- VICTIM frame {idx} page {fr['page']} (DIRTY, pass1) → write back")
                         return idx
                     elif pass_no == 2:
-                        self.db(f"-- VICTIM frame {idx} page {fr['page']} (pass2)")
+                        
+                        if fr['dirty']:
+                            self.disk_writes += 1
+                            self.db(f"-- VICTIM frame {idx} page {fr['page']} (DIRTY, pass2) → write back")
+                        else:
+                            self.db(f"-- VICTIM frame {idx} page {fr['page']} (CLEAN, pass2)")
                         return idx
                 self._advance_hand()
                 scanned += 1
